@@ -1,7 +1,6 @@
 <template>
   <!-- 添加 ref="containerRef" 用于锁定 GSAP 动画作用域 -->
   <div id="mySpacePage" ref="containerRef">
-
     <!-- 1. 顶部仪表盘区域 -->
     <div v-if="space.id" class="scope-view private-view">
       <div class="dashboard-header">
@@ -51,7 +50,7 @@
               <div class="storage-circle">
                 <a-progress
                   type="dashboard"
-                  :percent="parseFloat((space.totalSize / space.maxSize * 100).toFixed(2))"
+                  :percent="parseFloat(((space.totalSize / space.maxSize) * 100).toFixed(2))"
                   :width="120"
                   :strokeColor="{
                     '0%': '#108ee9',
@@ -90,23 +89,16 @@
             allow-clear
           >
             <template #suffix>
-              <a-button
-                type="text"
-                class="filter-toggle-btn"
-                @click="toggleAdvancedFilter"
-              >
+              <a-button type="text" class="filter-toggle-btn" @click="toggleAdvancedFilter">
                 <FilterOutlined :class="{ 'filter-active': isFilterActive }" />
                 <span class="filter-text">筛选</span>
-                <span v-if="activeFilterCount > 0" class="filter-count">{{ activeFilterCount }}</span>
+                <span v-if="activeFilterCount > 0" class="filter-count">{{
+                  activeFilterCount
+                }}</span>
               </a-button>
             </template>
           </a-input>
-          <a-button
-            type="primary"
-            size="large"
-            class="search-btn"
-            @click="handleSearch"
-          >
+          <a-button type="primary" size="large" class="search-btn" @click="handleSearch">
             搜索
           </a-button>
         </div>
@@ -135,13 +127,10 @@
                 @change="handleSearch"
               >
                 <a-select-option value="">全部分类</a-select-option>
-                <a-select-option value="风景">🏞️ 风景</a-select-option>
-                <a-select-option value="人物">👤 人物</a-select-option>
-                <a-select-option value="动物">🐾 动物</a-select-option>
-                <a-select-option value="建筑">🏛️ 建筑</a-select-option>
-                <a-select-option value="美食">🍜 美食</a-select-option>
-                <a-select-option value="艺术">🎨 艺术</a-select-option>
-                <a-select-option value="其他">📦 其他</a-select-option>
+                <a-select-option value="模板"> <LayoutOutlined /> 模板 </a-select-option>
+                <a-select-option value="电商"> <ShoppingOutlined /> 电商 </a-select-option>
+                <a-select-option value="表情包"> <SmileOutlined /> 表情包 </a-select-option>
+                <a-select-option value="海报"> <PictureOutlined /> 海报 </a-select-option>
               </a-select>
             </div>
           </a-col>
@@ -172,7 +161,7 @@
             <a-tag
               v-for="preset in datePresets"
               :key="preset.key"
-              :class="['quick-tag', { 'active': currentPreset === preset.key }]"
+              :class="['quick-tag', { active: currentPreset === preset.key }]"
               @click="applyDatePreset(preset)"
             >
               {{ preset.label }}
@@ -209,23 +198,24 @@
             <div class="art-card private-card card-anim">
               <div class="card-image-box">
                 <img :src="item.thumbnailUrl" :alt="item.name" />
-                <div class="status-badge success">
-                  <CheckCircleOutlined />
-                  <span>已发布</span>
-                </div>
                 <div class="private-actions">
                   <a-tooltip title="编辑">
-                    <a-button shape="circle" class="icon-btn">
+                    <a-button @click="handleEdit(item)" shape="circle" class="icon-btn">
                       <EditOutlined />
                     </a-button>
                   </a-tooltip>
                   <a-tooltip title="下载">
-                    <a-button shape="circle" class="icon-btn">
+                    <a-button @click="handleDownload(item)" shape="circle" class="icon-btn">
                       <DownloadOutlined />
                     </a-button>
                   </a-tooltip>
+                  <a-tooltip title="以图识图">
+                    <a-button @click="handleImageSearch(item)" shape="circle" class="icon-btn">
+                      <search-outlined />
+                    </a-button>
+                  </a-tooltip>
                   <a-tooltip title="删除">
-                    <a-button shape="circle" danger class="icon-btn">
+                    <a-button @click="handleDelete(item)" shape="circle" danger class="icon-btn">
                       <DeleteOutlined />
                     </a-button>
                   </a-tooltip>
@@ -235,7 +225,10 @@
                 <div class="card-title">{{ item.name }}</div>
                 <div class="file-meta">
                   <FileImageOutlined />
-                  <span>{{ item.picFormat }} · {{ showPictureSize(item.picSize) }} · {{ dayjs(item.createTime).format('YYYY-MM-DD') }}</span>
+                  <span
+                    >{{ item.picFormat }} · {{ showPictureSize(item.picSize) }} ·
+                    {{ dayjs(item.createTime).format('YYYY-MM-DD') }}</span
+                  >
                 </div>
               </div>
             </div>
@@ -254,17 +247,35 @@ import { computed, onMounted, reactive, ref, nextTick, onUnmounted, watch } from
 import { showPictureSize } from '@/utils'
 import dayjs, { Dayjs } from 'dayjs'
 import {
-  CheckCircleOutlined, CloudServerOutlined, CloudUploadOutlined,
-  DeleteOutlined, DownloadOutlined, EditOutlined,
-  FileImageOutlined, RocketTwoTone, SearchOutlined, FilterOutlined,
-  AppstoreOutlined, CalendarOutlined, ReloadOutlined
+  CheckCircleOutlined,
+  CloudServerOutlined,
+  CloudUploadOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  FileImageOutlined,
+  RocketTwoTone,
+  SearchOutlined,
+  FilterOutlined,
+  AppstoreOutlined,
+  CalendarOutlined,
+  ReloadOutlined,
+  LayoutOutlined,
+  ShoppingOutlined,
+  SmileOutlined,
+  PictureOutlined,
+  CloseCircleOutlined,
+  EyeOutlined,
 } from '@ant-design/icons-vue'
 import { useSpaceVoStore } from '@/stores/useSpaceVoStore'
 import RemindNoSpaceComponent from '@/components/space/RemindNoSpaceComponent.vue'
-import { listPictureVoByPageUsingPost } from '@/api/pictureController'
+import { deletePictureUsingPost, listPictureVoByPageUsingPost } from '@/api/pictureController'
 import router from '@/router'
 import gsap from 'gsap'
 import { useLoginUserStore } from '@/stores/useLoginUserStore'
+import { PIC_REVIEW_STATUS_ENUM } from '@/constants/PictureConstant'
+import { saveAs } from 'file-saver'
+import { message } from 'ant-design-vue'
 
 // --- 状态定义 ---
 const loading = ref(true)
@@ -286,10 +297,10 @@ const isFirstLoad = ref(true)
 // 搜索相关状态
 const showAdvancedFilter = ref(false) // 是否显示高级筛选面板
 const searchParams = reactive({
-  searchText: '',      // 关键词
-  category: '',        // 分类
-  startEditTime: '',   // 开始编辑时间
-  endEditTime: '',     // 结束编辑时间
+  searchText: '', // 关键词
+  category: '', // 分类
+  startEditTime: '', // 开始编辑时间
+  endEditTime: '', // 结束编辑时间
 })
 
 // 日期范围选择
@@ -303,6 +314,35 @@ const datePresets = [
   { key: 'month', label: '近30天', days: 30 },
   { key: 'quarter', label: '近3个月', days: 90 },
 ]
+
+// 编辑图片
+const handleEdit = (item: API.PictureVO) => {
+  router.push(`/creation/picture?id=${item.id}`)
+}
+
+// 下载图片
+const handleDownload = (item: API.PictureVO) => {
+  saveAs(item.url)
+}
+
+// 以图识图
+const handleImageSearch = (item: API.PictureVO) => {
+  router.push(`/picture/search/${item.id}`)
+}
+
+// 删除图片
+const handleDelete = async (item: API.PictureVO) => {
+  const res = await deletePictureUsingPost({
+    id: item.id,
+  })
+  if (res.data.code === 0 && res.data.data) {
+    message.success('删除成功')
+    await fetchPictures()
+  }else {
+    message.error(res.data.message)
+  }
+}
+
 
 // --- 分页配置 ---
 const paginationConfig = reactive({
@@ -339,8 +379,8 @@ const searchCondition = computed<API.PictureQueryRequest>(() => ({
   category: searchParams.category,
   spaceId: null,
   nullSpaceId: true,
-  // startEditTime: searchParams.startEditTime,
-  // endEditTime: searchParams.endEditTime,
+  startEditTime: searchParams.startEditTime,
+  endEditTime: searchParams.endEditTime,
 }))
 
 // --- 核心逻辑 ---
@@ -365,47 +405,67 @@ const initHeaderAnimations = () => {
         x: 0,
         opacity: 1,
         duration: 0.8,
-        ease: 'power3.out'
+        ease: 'power3.out',
       })
-        .to('.panel-right-anim', {
-          x: 0,
-          opacity: 1,
-          duration: 0.8,
-          ease: 'power3.out'
-        }, "<")
+        .to(
+          '.panel-right-anim',
+          {
+            x: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: 'power3.out',
+          },
+          '<',
+        )
 
         // 2. 内部元素动效
-        .from('.welcome-text > *', {
-          y: 20,
-          opacity: 0,
-          duration: 0.5,
-          stagger: 0.1,
-          ease: 'back.out(1.7)'
-        }, "-=0.4")
+        .from(
+          '.welcome-text > *',
+          {
+            y: 20,
+            opacity: 0,
+            duration: 0.5,
+            stagger: 0.1,
+            ease: 'back.out(1.7)',
+          },
+          '-=0.4',
+        )
 
         // 3. 火箭弹跳
-        .from('.rocket-icon', {
-          scale: 0,
-          rotation: -45,
-          duration: 0.8,
-          ease: 'elastic.out(1, 0.5)'
-        }, "-=0.6")
+        .from(
+          '.rocket-icon',
+          {
+            scale: 0,
+            rotation: -45,
+            duration: 0.8,
+            ease: 'elastic.out(1, 0.5)',
+          },
+          '-=0.6',
+        )
 
         // 4. 进度条缩放
-        .from('.storage-circle', {
-          scale: 0.8,
-          opacity: 0,
-          duration: 0.5,
-          ease: 'back.out(1.2)'
-        }, "-=0.4")
+        .from(
+          '.storage-circle',
+          {
+            scale: 0.8,
+            opacity: 0,
+            duration: 0.5,
+            ease: 'back.out(1.2)',
+          },
+          '-=0.4',
+        )
 
         // 5. 【关键修复】搜索栏动画 - 使用 to 方法
-        .to('.search-bar-anim', {
-          y: 0,
-          opacity: 1,
-          duration: 0,
-          ease: 'power2.out'
-        }, "-=0")
+        .to(
+          '.search-bar-anim',
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0,
+            ease: 'power2.out',
+          },
+          '-=0',
+        )
     }, containerRef.value)
   })
 }
@@ -419,7 +479,7 @@ const animateNumber = (targetValue: number) => {
     innerHTML: targetValue,
     duration: 1.5,
     snap: { innerHTML: 1 }, // 保证是整数
-    ease: 'power1.out'
+    ease: 'power1.out',
   })
 }
 
@@ -432,18 +492,20 @@ const animateCards = (quick: boolean = false) => {
     if (!cards.length) return
 
     if (quick) {
-      gsap.fromTo('.card-anim',
+      gsap.fromTo(
+        '.card-anim',
         { opacity: 0 },
         {
           opacity: 1,
           duration: 0.2,
           stagger: 0.02,
           ease: 'power1.out',
-          clearProps: 'opacity'
-        }
+          clearProps: 'opacity',
+        },
       )
     } else {
-      gsap.fromTo('.card-anim',
+      gsap.fromTo(
+        '.card-anim',
         { y: 20, opacity: 0 },
         {
           y: 0,
@@ -451,8 +513,8 @@ const animateCards = (quick: boolean = false) => {
           duration: 0.3,
           stagger: 0.03,
           ease: 'power2.out',
-          clearProps: 'all'
-        }
+          clearProps: 'all',
+        },
       )
     }
   })
@@ -472,20 +534,22 @@ const toggleAdvancedFilter = () => {
       ease: 'power2.in',
       onComplete: () => {
         showAdvancedFilter.value = false
-      }
+      },
     })
   } else {
     showAdvancedFilter.value = true
     nextTick(() => {
       if (filterPanelRef.value) {
-        gsap.fromTo(filterPanelRef.value,
+        gsap.fromTo(
+          filterPanelRef.value,
           { opacity: 0, y: -10 },
-          { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }
+          { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' },
         )
 
-        gsap.fromTo('.filter-item',
+        gsap.fromTo(
+          '.filter-item',
           { opacity: 0, y: -5 },
-          { opacity: 1, y: 0, duration: 0.25, stagger: 0.05, ease: 'power1.out' }
+          { opacity: 1, y: 0, duration: 0.25, stagger: 0.05, ease: 'power1.out' },
         )
       }
     })
@@ -515,9 +579,8 @@ const applyDatePreset = (preset: any) => {
 
   currentPreset.value = preset.key
   const endDate = dayjs()
-  const startDate = preset.days === 0
-    ? endDate.startOf('day')
-    : endDate.subtract(preset.days, 'day')
+  const startDate =
+    preset.days === 0 ? endDate.startOf('day') : endDate.subtract(preset.days, 'day')
 
   dateRange.value = [startDate, endDate]
   searchParams.startEditTime = startDate.format('YYYY-MM-DD')
@@ -550,7 +613,7 @@ const handleReset = () => {
       duration: 0.2,
       yoyo: true,
       repeat: 1,
-      ease: 'power1.inOut'
+      ease: 'power1.inOut',
     })
   }
 
@@ -870,7 +933,8 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 15px;
   transition: $transition-smooth;
 
-  &:hover, &:focus {
+  &:hover,
+  &:focus {
     border-color: $primary-color;
     box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.08);
   }
@@ -950,7 +1014,7 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 
   // 初始状态控制,配合v-show指令
-  &[style*="display: none"] {
+  &[style*='display: none'] {
     display: none !important;
   }
 }
@@ -972,8 +1036,10 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   // 修改 antd 组件样式
-  :deep(.ant-select), :deep(.ant-picker) {
-    .ant-select-selector, .ant-picker-input input {
+  :deep(.ant-select),
+  :deep(.ant-picker) {
+    .ant-select-selector,
+    .ant-picker-input input {
       border-radius: 10px;
       border: 2px solid #f0f0f0;
       transition: $transition-smooth;
@@ -1126,10 +1192,18 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   align-items: center;
   gap: 4px;
   backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   &.success {
     background: rgba(82, 196, 26, 0.9);
+  }
+
+  &.warning {
+    background: rgba(250, 173, 20, 0.9);
+  }
+
+  &.danger {
+    background: rgba(245, 34, 45, 0.9);
   }
 }
 
