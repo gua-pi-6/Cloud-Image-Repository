@@ -49,7 +49,6 @@ const spaceId = useSpaceVoStore().spaceVo.id
 const handleUpload = async ({ file }: any) => {
   try {
     // 可以做一些优化防止用户把一张照片上传多次
-    // TODO
     // const params = props.picture ? { id: props.picture.id, spaceId: spaceId} : {}
     const params = { spaceId: spaceId }
     const newPicture = await uploadPictureUsingPost(params, {}, file)
