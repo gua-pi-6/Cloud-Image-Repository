@@ -1,13 +1,12 @@
 <template>
-  <!-- 添加 ref="containerRef" 用于锁定 GSAP 动画作用域 -->
-  <div id="mySpacePage" ref="containerRef">
+  <div id="mySpacePage">
     <!-- 1. 顶部仪表盘区域 -->
     <div v-if="space.id" class="scope-view private-view">
       <div class="dashboard-header">
         <a-row :gutter="24">
           <!-- 左侧:欢迎面板 -->
           <a-col :span="24" :md="16">
-            <div class="welcome-panel glass-panel panel-left-anim">
+            <div class="welcome-panel glass-panel">
               <div class="welcome-text">
                 <div class="greeting-badge">
                   <span class="badge-emoji">👋</span>
@@ -16,7 +15,7 @@
                 <h2 class="welcome-title">创作者工作台</h2>
                 <p class="welcome-desc">
                   您已累计发布了
-                  <!-- 使用 span 包裹数字,方便 GSAP 做数字滚动动画 -->
+                  <!-- 保留 span 包裹数字,用于 GSAP 做数字滚动动画 -->
                   <span class="highlight-number" ref="countRef">0</span>
                   张作品
                 </p>
@@ -42,7 +41,7 @@
 
           <!-- 右侧:统计面板 -->
           <a-col :span="24" :md="8">
-            <div class="stats-panel glass-panel panel-right-anim">
+            <div class="stats-panel glass-panel">
               <div class="stats-header">
                 <CloudServerOutlined class="stats-icon" />
                 <h4>云端存储概览</h4>
@@ -74,10 +73,10 @@
       </div>
     </div>
 
-    <!-- 2. 搜索筛选区域 - 独立于个人空间之外 -->
-    <div v-if="space.id" class="search-section" ref="searchSectionRef">
+    <!-- 2. 搜索筛选区域 -->
+    <div v-if="space.id" class="search-section">
       <!-- 主搜索栏 -->
-      <div class="main-search-bar glass-panel search-bar-anim">
+      <div class="main-search-bar glass-panel">
         <div class="search-input-wrapper">
           <SearchOutlined class="search-icon" />
           <a-input
@@ -93,8 +92,8 @@
                 <FilterOutlined :class="{ 'filter-active': isFilterActive }" />
                 <span class="filter-text">筛选</span>
                 <span v-if="activeFilterCount > 0" class="filter-count">{{
-                  activeFilterCount
-                }}</span>
+                    activeFilterCount
+                  }}</span>
               </a-button>
             </template>
           </a-input>
@@ -105,11 +104,7 @@
       </div>
 
       <!-- 高级筛选面板 -->
-      <div
-        v-show="showAdvancedFilter"
-        class="advanced-filter-panel glass-panel"
-        ref="filterPanelRef"
-      >
+      <div v-show="showAdvancedFilter" class="advanced-filter-panel glass-panel">
         <a-row :gutter="[16, 16]">
           <!-- 分类筛选 -->
           <a-col :span="24" :md="12">
@@ -184,6 +179,7 @@
         </div>
       </div>
     </div>
+
     <!-- 3. 图片列表区域 -->
     <div v-if="space.id" class="gallery-grid private-grid">
       <a-list
@@ -194,8 +190,7 @@
       >
         <template #renderItem="{ item }">
           <a-list-item>
-            <!-- 添加 card-anim 类用于 GSAP 控制 -->
-            <div class="art-card private-card card-anim">
+            <div class="art-card private-card">
               <div class="card-image-box">
                 <img @click="toPictureDetail(item.id)" :src="item.thumbnailUrl" :alt="item.name" />
                 <div class="private-actions">
@@ -231,7 +226,7 @@
                 <div class="file-meta">
                   <FileImageOutlined />
                   <span
-                    >{{ item.picFormat }} · {{ showPictureSize(item.picSize) }} ·
+                  >{{ item.picFormat }} · {{ showPictureSize(item.picSize) }} ·
                     {{ dayjs(item.createTime).format('YYYY-MM-DD') }}</span
                   >
                 </div>
@@ -248,11 +243,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, nextTick, onUnmounted, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { showPictureSize } from '@/utils'
 import dayjs, { Dayjs } from 'dayjs'
 import {
-  CheckCircleOutlined,
   CloudServerOutlined,
   CloudUploadOutlined,
   DeleteOutlined,
@@ -270,8 +264,6 @@ import {
   SmileOutlined,
   PictureOutlined,
   ExpandOutlined,
-  CloseCircleOutlined,
-  EyeOutlined,
 } from '@ant-design/icons-vue'
 import { useSpaceVoStore } from '@/stores/useSpaceVoStore'
 import RemindNoSpaceComponent from '@/components/space/RemindNoSpaceComponent.vue'
@@ -279,7 +271,6 @@ import { deletePictureUsingPost, listPictureVoByPageUsingPost } from '@/api/pict
 import router from '@/router'
 import gsap from 'gsap'
 import { useLoginUserStore } from '@/stores/useLoginUserStore'
-import { PIC_REVIEW_STATUS_ENUM } from '@/constants/PictureConstant'
 import { saveAs } from 'file-saver'
 import { message } from 'ant-design-vue'
 
@@ -290,15 +281,8 @@ const space = computed<API.SpaceVO>(() => spaceVoStore.spaceVo)
 const images = ref<API.PictureVO[]>([])
 const loginUserStore = useLoginUserStore()
 
-// 动画相关 Refs
-const containerRef = ref(null)
+// 数字动画 Ref
 const countRef = ref(null)
-const searchSectionRef = ref(null)
-const filterPanelRef = ref(null)
-let ctx: gsap.Context
-
-// 首次加载标志（用于动画优化）
-const isFirstLoad = ref(true)
 
 // 搜索相关状态
 const showAdvancedFilter = ref(false) // 是否显示高级筛选面板
@@ -355,11 +339,10 @@ const handleDelete = async (item: API.PictureVO) => {
     message.success('删除成功')
     fetchPictures()
     spaceVoStore.fetchSpaceVo()
-  }else {
+  } else {
     message.error(res.data.message)
   }
 }
-
 
 // --- 分页配置 ---
 const paginationConfig = reactive({
@@ -403,92 +386,7 @@ const searchCondition = computed<API.PictureQueryRequest>(() => ({
 // --- 核心逻辑 ---
 
 /**
- * 初始化静态动画(头部面板 + 搜索区域)
- * 【关键修复】使用 CSS 初始状态 + to 方法，避免闪烁
- */
-const initHeaderAnimations = () => {
-  nextTick(() => {
-    if (!containerRef.value) return
-
-    // 如果之前有 context，先清理
-    if (ctx) ctx.revert()
-
-    // 使用 gsap.context 管理动画
-    ctx = gsap.context(() => {
-      const tl = gsap.timeline()
-
-      // 1. 面板入场 - 使用 to 方法（CSS 已设置初始状态）
-      tl.to('.panel-left-anim', {
-        x: 0,
-        opacity: 1,
-        duration: 0.8,
-        ease: 'power3.out',
-      })
-        .to(
-          '.panel-right-anim',
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.8,
-            ease: 'power3.out',
-          },
-          '<',
-        )
-
-        // 2. 内部元素动效
-        .from(
-          '.welcome-text > *',
-          {
-            y: 20,
-            opacity: 0,
-            duration: 0.5,
-            stagger: 0.1,
-            ease: 'back.out(1.7)',
-          },
-          '-=0.4',
-        )
-
-        // 3. 火箭弹跳
-        .from(
-          '.rocket-icon',
-          {
-            scale: 0,
-            rotation: -45,
-            duration: 0.8,
-            ease: 'elastic.out(1, 0.5)',
-          },
-          '-=0.6',
-        )
-
-        // 4. 进度条缩放
-        .from(
-          '.storage-circle',
-          {
-            scale: 0.8,
-            opacity: 0,
-            duration: 0.5,
-            ease: 'back.out(1.2)',
-          },
-          '-=0.4',
-        )
-
-        // 5. 【关键修复】搜索栏动画 - 使用 to 方法
-        .to(
-          '.search-bar-anim',
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0,
-            ease: 'power2.out',
-          },
-          '-=0',
-        )
-    }, containerRef.value)
-  })
-}
-
-/**
- * 数字滚动动画
+ * 唯一保留的 GSAP 动画：数字滚动动画
  */
 const animateNumber = (targetValue: number) => {
   if (!countRef.value) return
@@ -501,76 +399,10 @@ const animateNumber = (targetValue: number) => {
 }
 
 /**
- * 列表卡片入场动画
- */
-const animateCards = (quick: boolean = false) => {
-  nextTick(() => {
-    const cards = document.querySelectorAll('.card-anim')
-    if (!cards.length) return
-
-    if (quick) {
-      gsap.fromTo(
-        '.card-anim',
-        { opacity: 0 },
-        {
-          opacity: 1,
-          duration: 0.2,
-          stagger: 0.02,
-          ease: 'power1.out',
-          clearProps: 'opacity',
-        },
-      )
-    } else {
-      gsap.fromTo(
-        '.card-anim',
-        { y: 20, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.3,
-          stagger: 0.03,
-          ease: 'power2.out',
-          clearProps: 'all',
-        },
-      )
-    }
-  })
-}
-
-/**
- * 切换高级筛选面板
+ * 切换高级筛选面板（剔除复杂动画）
  */
 const toggleAdvancedFilter = () => {
-  const isOpening = !showAdvancedFilter.value
-
-  if (!isOpening && filterPanelRef.value) {
-    gsap.to(filterPanelRef.value, {
-      opacity: 0,
-      y: -10,
-      duration: 0.2,
-      ease: 'power2.in',
-      onComplete: () => {
-        showAdvancedFilter.value = false
-      },
-    })
-  } else {
-    showAdvancedFilter.value = true
-    nextTick(() => {
-      if (filterPanelRef.value) {
-        gsap.fromTo(
-          filterPanelRef.value,
-          { opacity: 0, y: -10 },
-          { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' },
-        )
-
-        gsap.fromTo(
-          '.filter-item',
-          { opacity: 0, y: -5 },
-          { opacity: 1, y: 0, duration: 0.25, stagger: 0.05, ease: 'power1.out' },
-        )
-      }
-    })
-  }
+  showAdvancedFilter.value = !showAdvancedFilter.value
 }
 
 /**
@@ -614,7 +446,7 @@ const handleSearch = () => {
 }
 
 /**
- * 重置所有筛选条件
+ * 重置所有筛选条件（剔除晃动动画）
  */
 const handleReset = () => {
   searchParams.searchText = ''
@@ -623,16 +455,6 @@ const handleReset = () => {
   searchParams.endEditTime = ''
   dateRange.value = null
   currentPreset.value = ''
-
-  if (filterPanelRef.value) {
-    gsap.to('.filter-item', {
-      scale: 0.95,
-      duration: 0.2,
-      yoyo: true,
-      repeat: 1,
-      ease: 'power1.inOut',
-    })
-  }
 
   handleSearch()
 }
@@ -650,12 +472,9 @@ const fetchPictures = async () => {
   if (res.data.code === 0 && res.data.data) {
     images.value = res.data.data.records ?? []
     paginationConfig.total = res.data.data.total
-    animateNumber(paginationConfig.total)
-    animateCards(!isFirstLoad.value)
 
-    if (isFirstLoad.value) {
-      isFirstLoad.value = false
-    }
+    // 触发数字滚动动画
+    animateNumber(paginationConfig.total)
   }
   loading.value = false
 }
@@ -672,17 +491,7 @@ onMounted(async () => {
   if (loginUserStore.loginUser?.id && !spaceVoStore.spaceVo?.id) {
     await spaceVoStore.fetchSpaceVo()
   }
-
-  // 数据加载完成后再初始化动画
-  if (space.value.id) {
-    initHeaderAnimations()
-  }
-
   fetchPictures()
-})
-
-onUnmounted(() => {
-  ctx?.revert() // 清理动画,防止内存泄漏
 })
 </script>
 
@@ -690,7 +499,7 @@ onUnmounted(() => {
 // --- 变量定义 ---
 $primary-color: #1890ff;
 $secondary-color: #36cfc9;
-$accent-color: #faad14; // 暖金色点缀
+$accent-color: #faad14;
 $glass-bg: rgba(255, 255, 255, 0.85);
 $glass-border: 1px solid rgba(255, 255, 255, 0.6);
 $shadow-sm: 0 4px 20px rgba(0, 0, 0, 0.06);
@@ -717,23 +526,6 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   &:hover {
     box-shadow: $shadow-md;
   }
-}
-
-// --- 🔥 关键修复：动画元素初始状态 ---
-// 给需要动画的元素设置初始不可见状态
-.panel-left-anim {
-  opacity: 0;
-  transform: translateX(-50px);
-}
-
-.panel-right-anim {
-  opacity: 0;
-  transform: translateX(50px);
-}
-
-.search-bar-anim {
-  opacity: 0;
-  transform: translateY(-30px);
 }
 
 // --- 仪表盘头部 ---
@@ -914,7 +706,7 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 16px;
 }
 
-// --- 搜索区域样式 - 新增 ---
+// --- 搜索区域样式 ---
 .search-section {
   margin-bottom: 24px;
 }
@@ -956,7 +748,6 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.08);
   }
 
-  // 深度选择器修改 antd 样式
   :deep(.ant-input) {
     font-size: 15px;
     &::placeholder {
@@ -974,7 +765,6 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 4px 12px;
   border-radius: 8px;
   transition: all 0.3s;
-  position: relative;
 
   &:hover {
     color: $primary-color;
@@ -1029,11 +819,6 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   background: linear-gradient(135deg, #ffffff 0%, #fefaf6 100%);
   border-left: 4px solid $accent-color;
   overflow: hidden;
-
-  // 初始状态控制,配合v-show指令
-  &[style*='display: none'] {
-    display: none !important;
-  }
 }
 
 .filter-item {
@@ -1052,7 +837,6 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
   }
 
-  // 修改 antd 组件样式
   :deep(.ant-select),
   :deep(.ant-picker) {
     .ant-select-selector,
@@ -1193,34 +977,6 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     height: 100%;
     object-fit: cover;
     transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-}
-
-.status-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-  &.success {
-    background: rgba(82, 196, 26, 0.9);
-  }
-
-  &.warning {
-    background: rgba(250, 173, 20, 0.9);
-  }
-
-  &.danger {
-    background: rgba(245, 34, 45, 0.9);
   }
 }
 

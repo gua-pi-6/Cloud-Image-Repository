@@ -6,7 +6,7 @@ import { getSpaceVoUsingPost } from '../api/spaceController'
 
 export const useSpaceVoStore = defineStore('useSpaceVoStore', () => {
   const spaceVo = ref<API.SpaceVO>({
-    id: null
+    id: null,
   })
 
 

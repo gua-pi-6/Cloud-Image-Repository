@@ -352,7 +352,7 @@ declare namespace API {
   type SpaceVO = {
     createTime?: string
     editTime?: string
-    id?: number
+    id?: number | null
     maxCount?: number
     maxSize?: number
     spaceLevel?: number
