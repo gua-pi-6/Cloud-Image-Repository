@@ -4,7 +4,7 @@
     <a-config-provider
       :theme="{
         token: {
-          colorPrimary: '#0d9488',
+          colorPrimary: '#1890ff',
         },
       }"
     >
@@ -26,7 +26,6 @@
             <div class="sider-content">
               <!-- 【核心修改】移除模板中写死的标签，完全使用 :items="menuItems" 数据驱动渲染 -->
               <a-menu
-                v-model:selectedKeys="selectedKeys"
                 v-model:openKeys="openKeys"
                 mode="inline"
                 class="custom-menu"
@@ -65,18 +64,26 @@ import {
 } from '@ant-design/icons-vue';
 import gsap from 'gsap';
 // 如果 SPACE_TYPE_ENUM 在你的实际项目中有用到，保留引入
-import { SPACE_TYPE_ENUM } from '@/constants/SpaceConstant'
 import { listMyTeamSpaceUsingPost } from '@/api/spaceUserController'
 import { message } from 'ant-design-vue'
 import { useLoginUserStore } from '@/stores/useLoginUserStore'
+import { useSpaceVoStore } from '@/stores/useSpaceVoStore'
 
 // --- 路由与菜单逻辑 ---
 const router = useRouter();
-const selectedKeys = ref<string[]>([]);
+const spaceVoStore = useSpaceVoStore()
 const openKeys = ref<string[]>(['my-teams']); // 默认展开 key 为 'my-teams' 的下拉列表
 
 // 点击菜单项跳转
-const handleMenuClick = ({ key }: { key: string }) => {
+const handleMenuClick = async ({ key }: { key: string }) => {
+  if ( key === '/space') {
+    if (!spaceVoStore.spaceVo.id) {
+      await spaceVoStore.fetchSpaceVo()
+    }
+    if (!spaceVoStore.spaceVo.id) {
+      router.push('/creation/space')
+    }
+  }
   router.push(key);
 };
 
@@ -128,7 +135,7 @@ const menuItems = computed(() => {
   const teamSpaceSubMenus = teamSpaceList.value.map((spaceUser) => {
     const space = spaceUser.space
     return {
-      key: '/space/' + spaceUser.spaceId,
+      key: '/teamSpace/' + space?.id,
       label: space?.spaceName,
       title: space?.spaceName,
       class: 'side-menu-item'
@@ -239,21 +246,21 @@ onMounted(() => {
   border-right: none !important;
 }
 
-/* 选中状态样式定制 (保持你原本的青色主题) */
+/* 选中状态样式定制：使用 Ant Design 默认主色（与 ConfigProvider 保持一致） */
 :deep(.ant-menu-item-selected) {
-  background-color: #f0fdfa !important;
-  color: #0d9488 !important;
+  background-color: #e6f7ff !important; /* antd light primary background */
+  color: #1890ff !important;
   font-weight: 600;
 }
 
 :deep(.ant-menu-item-selected)::after {
-  border-right: 3px solid #0d9488 !important;
+  border-right: 3px solid #1890ff !important;
 }
 
 /* 菜单项和子菜单标题的 Hover 状态 */
 :deep(.ant-menu-item:hover),
 :deep(.ant-menu-submenu-title:hover) {
-  color: #0d9488 !important;
+  color: #1890ff !important;
 }
 
 :deep(.ant-menu-item .anticon),

@@ -355,6 +355,18 @@ declare namespace API {
     value?: number
   }
 
+  type SpaceQueryRequest = {
+    current?: number
+    id?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+    spaceLevel?: number
+    spaceName?: string
+    spaceType?: number
+    userId?: number
+  }
+
   type SpaceUpdateRequest = {
     id?: number
     maxCount?: number

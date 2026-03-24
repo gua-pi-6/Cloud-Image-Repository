@@ -49,7 +49,7 @@
               <div class="storage-circle">
                 <a-progress
                   type="dashboard"
-                  :percent="parseFloat(((space.totalSize / space.maxSize) * 100).toFixed(2))"
+                  :percent="storagePercent"
                   :width="120"
                   :strokeColor="{
                     '0%': '#108ee9',
@@ -59,11 +59,11 @@
                 <div class="storage-info">
                   <div class="stat-row">
                     <span class="stat-label">已用</span>
-                    <b class="stat-value">{{ showPictureSize(space.totalSize) }}</b>
+                    <b class="stat-value">{{ displayTotalSize }}</b>
                   </div>
                   <div class="stat-row">
                     <span class="stat-label">总量</span>
-                    <b class="stat-value">{{ showPictureSize(space.maxSize) }}</b>
+                    <b class="stat-value">{{ displayMaxSize }}</b>
                   </div>
                 </div>
               </div>
@@ -121,11 +121,17 @@
                 allow-clear
                 @change="handleSearch"
               >
-                <a-select-option value="">全部分类</a-select-option>
-                <a-select-option value="模板"> <LayoutOutlined /> 模板 </a-select-option>
-                <a-select-option value="电商"> <ShoppingOutlined /> 电商 </a-select-option>
-                <a-select-option value="表情包"> <SmileOutlined /> 表情包 </a-select-option>
-                <a-select-option value="海报"> <PictureOutlined /> 海报 </a-select-option>
+                <!-- 动态渲染分类选项 -->
+                <a-select-option
+                  v-for="opt in categoryOptions"
+                  :key="opt.key || opt.value || opt.label"
+                  :value="opt.value"
+                >
+                  <template v-if="opt.icon">
+                    <component :is="opt.icon" style="margin-right:6px;" />
+                  </template>
+                  {{ opt.label }}
+                </a-select-option>
               </a-select>
             </div>
           </a-col>
@@ -206,7 +212,7 @@
                   </a-tooltip>
                   <a-tooltip title="以图识图">
                     <a-button @click="handleImageSearch(item)" shape="circle" class="icon-btn">
-                      <search-outlined />
+                      <SearchOutlined />
                     </a-button>
                   </a-tooltip>
                   <a-tooltip title="以图扩图">
@@ -305,6 +311,15 @@ const datePresets = [
   { key: 'quarter', label: '近3个月', days: 90 },
 ]
 
+// 分类选项（与团队空间保持一致）
+const categoryOptions: Array<{ key?: string; value: string; label: string; icon?: any }> = [
+  { key: 'all', value: '', label: '全部分类' },
+  { key: 'template', value: '模板', label: '模板', icon: LayoutOutlined },
+  { key: 'ecommerce', value: '电商', label: '电商', icon: ShoppingOutlined },
+  { key: 'sticker', value: '表情包', label: '表情包', icon: SmileOutlined },
+  { key: 'poster', value: '海报', label: '海报', icon: PictureOutlined },
+]
+
 // 跳转图片详情页
 const toPictureDetail = (id: number) => {
   router.push(`/picture/${id}`)
@@ -322,7 +337,16 @@ const handleEdit = (item: API.PictureVO) => {
 
 // 下载图片
 const handleDownload = (item: API.PictureVO) => {
-  saveAs(item.url)
+  if (!item || !item.url) {
+    message.warn('下载地址不可用')
+    return
+  }
+  const filename = item.name ? `${item.name}` : 'picture'
+  try {
+    saveAs(item.url as any, filename)
+  } catch (e) {
+    message.error('下载失败，请检查图片地址或稍后重试')
+  }
 }
 
 // 以图识图
@@ -371,13 +395,13 @@ const isFilterActive = computed(() => {
 })
 
 // 构建搜索条件
-const searchCondition = computed<API.PictureQueryRequest>(() => ({
+const searchCondition = computed((): API.PictureQueryRequest => ({
   current: paginationConfig.current,
   pageSize: paginationConfig.pageSize,
   searchText: searchParams.searchText,
   tags: [],
   category: searchParams.category,
-  spaceId: null,
+  spaceId: space.value?.id ?? undefined,
   nullSpaceId: true,
   startEditTime: searchParams.startEditTime,
   endEditTime: searchParams.endEditTime,
@@ -471,7 +495,7 @@ const fetchPictures = async () => {
 
   if (res.data.code === 0 && res.data.data) {
     images.value = res.data.data.records ?? []
-    paginationConfig.total = res.data.data.total
+    paginationConfig.total = res.data.data.total ?? 0
 
     // 触发数字滚动动画
     animateNumber(paginationConfig.total)
@@ -493,6 +517,17 @@ onMounted(async () => {
   }
   fetchPictures()
 })
+
+// 计算显示与防御性类型转换
+const storagePercent = computed<number>(() => {
+  const used = space.value?.totalSize ?? 0
+  const max = space.value?.maxSize ?? 1
+  const percent = (used / max) * 100
+  return parseFloat(percent.toFixed(2))
+})
+
+const displayTotalSize = computed<string>(() => showPictureSize(space.value?.totalSize ?? 0))
+const displayMaxSize = computed<string>(() => showPictureSize(space.value?.maxSize ?? 0))
 </script>
 
 <style scoped lang="scss">
@@ -531,6 +566,14 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 // --- 仪表盘头部 ---
 .dashboard-header {
   margin-bottom: 20px;
+}
+
+/* 统一的仪表盘面板基类，确保顶部展示组件高度一致（与团队空间统一） */
+.dashboard-panel {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .welcome-panel {
@@ -581,6 +624,7 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: 12px;
   color: #1a1a1a;
   background: linear-gradient(135deg, #1a1a1a, $primary-color);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -706,52 +750,47 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 16px;
 }
 
-// --- 搜索区域样式 ---
+// --- 搜索区域样式 (使用团队空间风格) ---
 .search-section {
   margin-bottom: 24px;
 }
 
 .main-search-bar {
-  padding: 20px 28px;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
-  border: 2px solid transparent;
-  transition: $transition-smooth;
+  padding: 16px 24px;
+  margin-bottom: 0; // 由于后续可能接高级筛选，取消固定底部外边距
 
-  &:hover {
-    border-color: rgba(24, 144, 255, 0.2);
-    box-shadow: 0 8px 24px rgba(24, 144, 255, 0.12);
-  }
-}
-
-.search-input-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.search-icon {
-  font-size: 20px;
-  color: $primary-color;
-  margin-right: 4px;
-}
-
-.main-search-input {
-  flex: 1;
-  border-radius: 12px;
-  border: 2px solid #e8f4ff;
-  font-size: 15px;
-  transition: $transition-smooth;
-
-  &:hover,
-  &:focus {
-    border-color: $primary-color;
-    box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.08);
+  .search-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
-  :deep(.ant-input) {
-    font-size: 15px;
-    &::placeholder {
-      color: #bfbfbf;
+  .search-icon {
+    font-size: 20px;
+    color: $primary-color;
+    margin-right: 4px;
+  }
+
+  .main-search-input {
+    flex: 1;
+    border-radius: 8px;
+    border: 1px solid #e8e8e8;
+
+    &:hover,
+    &:focus {
+      border-color: $primary-color;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+    }
+  }
+
+  .search-btn {
+    border-radius: 8px;
+    background: $primary-color;
+    border: none;
+    font-weight: 500;
+
+    &:hover {
+      background: #096dd9;
     }
   }
 }
@@ -759,66 +798,28 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 .filter-toggle-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   color: #666;
-  font-weight: 500;
-  padding: 4px 12px;
-  border-radius: 8px;
-  transition: all 0.3s;
 
-  &:hover {
-    color: $primary-color;
-    background: rgba(24, 144, 255, 0.08);
-  }
-
-  .filter-active {
+  &:hover, .filter-active {
     color: $primary-color;
   }
-}
-
-.filter-text {
-  font-size: 14px;
 }
 
 .filter-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+  background: #ff4d4f;
   color: #fff;
+  padding: 0 6px;
   border-radius: 10px;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.search-btn {
-  min-width: 100px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, $primary-color, $secondary-color);
-  border: none;
-  font-weight: 600;
-  font-size: 15px;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25);
-  transition: $transition-smooth;
-
-  &:hover {
-    background: linear-gradient(135deg, #096dd9, #13c2c2);
-    box-shadow: 0 6px 16px rgba(24, 144, 255, 0.35);
-    transform: translateY(-2px);
-  }
+  font-size: 12px;
+  margin-left: 4px;
 }
 
 // 高级筛选面板
 .advanced-filter-panel {
   margin-top: 16px;
-  background: linear-gradient(135deg, #ffffff 0%, #fefaf6 100%);
-  border-left: 4px solid $accent-color;
-  overflow: hidden;
+  background: #fff;
+  border-top: 3px solid $primary-color;
 }
 
 .filter-item {
@@ -826,117 +827,61 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 10px;
-    font-weight: 600;
+    margin-bottom: 8px;
     font-size: 14px;
     color: #333;
+    font-weight: 500;
 
     .label-icon {
-      font-size: 16px;
-      color: $accent-color;
+      color: $primary-color;
     }
   }
 
-  :deep(.ant-select),
+  :deep(.ant-select-selector),
   :deep(.ant-picker) {
-    .ant-select-selector,
-    .ant-picker-input input {
-      border-radius: 10px;
-      border: 2px solid #f0f0f0;
-      transition: $transition-smooth;
-
-      &:hover {
-        border-color: $accent-color;
-      }
-    }
-
-    &.ant-select-focused .ant-select-selector,
-    &.ant-picker-focused {
-      border-color: $accent-color !important;
-      box-shadow: 0 0 0 3px rgba(250, 173, 20, 0.1) !important;
-    }
+    border-radius: 8px;
   }
 }
 
-// 快捷时间选择
+// 快捷时间
 .quick-date-filters {
-  margin-top: 20px;
+  margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px dashed #e8e8e8;
+  border-top: 1px dashed #f0f0f0;
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-}
 
-.quick-label {
-  color: #999;
-  font-size: 13px;
-  font-weight: 500;
-}
+  .quick-label { font-size: 13px; color: #999; }
 
-.quick-tag {
-  cursor: pointer;
-  border-radius: 8px;
-  padding: 4px 14px;
-  font-size: 13px;
-  border: 2px solid #f0f0f0;
-  background: #fff;
-  color: #666;
-  transition: all 0.3s;
+  .quick-tag {
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 4px 12px;
+    border: 1px solid #e8e8e8;
+    background: #fafafa;
+    color: #666;
+    transition: all 0.2s;
 
-  &:hover {
-    border-color: $accent-color;
-    color: $accent-color;
-    transform: translateY(-2px);
-  }
-
-  &.active {
-    background: linear-gradient(135deg, $accent-color, #ffc53d);
-    border-color: $accent-color;
-    color: #fff;
-    font-weight: 600;
-    box-shadow: 0 3px 8px rgba(250, 173, 20, 0.3);
+    &:hover { color: $primary-color; border-color: $primary-color; }
+    &.active {
+      background: $primary-color;
+      border-color: $primary-color;
+      color: #fff;
+    }
   }
 }
 
-// 筛选操作区
 .filter-actions {
-  margin-top: 20px;
+  margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px dashed #e8e8e8;
+  border-top: 1px dashed #f0f0f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
 
-.reset-btn {
-  border-radius: 10px;
-  border: 2px solid #f0f0f0;
-  color: #666;
-  font-weight: 500;
-  transition: $transition-smooth;
-
-  &:hover {
-    border-color: #ff4d4f;
-    color: #ff4d4f;
-    background: #fff1f0;
-  }
-}
-
-.filter-summary {
-  font-size: 13px;
-  color: #999;
-
-  .count-highlight {
-    color: $accent-color;
-    font-size: 16px;
-    margin: 0 4px;
-  }
-
-  .no-filter {
-    color: #bfbfbf;
-  }
+  .reset-btn { border-radius: 6px; }
+  .filter-summary .count-highlight { color: $primary-color; margin: 0 4px; }
 }
 
 // --- 列表与卡片 ---
@@ -1083,3 +1028,5 @@ $transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 </style>
+
+

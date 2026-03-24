@@ -1,17 +1,15 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import { message } from 'ant-design-vue'
-import router from '../router'
 import { getSpaceVoUsingPost } from '../api/spaceController'
 
 export const useSpaceVoStore = defineStore('useSpaceVoStore', () => {
   const spaceVo = ref<API.SpaceVO>({
-    id: null,
+    id: undefined,
   })
 
 
   const fetchSpaceVo = async () => {
-      const res = await getSpaceVoUsingPost()
+      const res = await getSpaceVoUsingPost({spaceType: 0})
       if (res?.data.code === 0 && res?.data.data){
         spaceVo.value = res.data.data
       }

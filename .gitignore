@@ -1,6 +1,6 @@
 .cursor
-.vscode
 test.vue
+.vscode
 # Logs
 logs
 *.log

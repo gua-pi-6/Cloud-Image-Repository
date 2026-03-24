@@ -174,7 +174,7 @@ const btnHoverLeave = (e: MouseEvent) => {
 // --- 业务逻辑 (保持原样) ---
 const handleCreate = async (values: any) => {
   loading.value = true;
-  const params = {spaceName: formState.spaceName, spaceLevel: 0}
+  const params = {spaceName: formState.spaceName, spaceLevel: 0, spaceType: 0}
   // 模拟请求延迟效果，让动画稍微展示一会（可选）
   try {
     const res = await addSpaceUsingPost(params)
