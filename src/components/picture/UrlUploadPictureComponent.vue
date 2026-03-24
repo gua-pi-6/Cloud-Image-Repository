@@ -1,5 +1,9 @@
 <template>
   <div id="urlUploadFileElement">
+    <UploadSpaceSelector @change="handleSpaceChange"
+                         :teamList="teamList"
+                         v-if="!hasId"
+    />
     <div class="url-picture-upload">
       <a-input-group compact style="margin-bottom: 16px">
         <a-input v-model:value="fileUrl" style="width: calc(100% - 120px)" placeholder="请输入图片 URL" />
@@ -13,10 +17,13 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref } from 'vue'
-import { InboxOutlined } from '@ant-design/icons-vue'
+import { onMounted, ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
-import { getPictureVoByIdUsingGet, uploadPictureUsingPost } from '@/api/pictureController'
+import { uploadPictureUsingPost } from '@/api/pictureController'
+import UploadSpaceSelector from '@/components/picture/UploadSpaceSelector.vue'
+import { listMyTeamSpaceUsingPost } from '@/api/spaceUserController'
+import { useSpaceVoStore } from '@/stores/useSpaceVoStore'
+import { useRoute } from 'vue-router'
 
 interface PictureHandleType {
   picture?: API.PictureVO
@@ -29,17 +36,48 @@ const loading = ref(false)
 const fileUrl = ref('')
 const pictureId = ref()
 const picture = ref<API.PictureVO>({})
+// make route params id reactive so template v-if works as expected
+const route = useRoute()
+// compute a boolean for whether an id exists (avoids string/undefined truthiness pitfalls)
+const hasId = computed(() => Boolean(route.params.id))
 
 
+const teamList = ref<Array<{ id: number, spaceName?: string }>>([])
+
+const fetchTeamList = async () => {
+  const res: any = await listMyTeamSpaceUsingPost()
+  if (res.data.code === 0 && res.data.data) {
+    const data = res.data.data as any[]
+    teamList.value = data.map((item: any) => ({
+      id: item?.space?.id || -1,
+      spaceName: item?.space?.spaceName || '',
+    }))
+  }
+}
+onMounted(() => {
+  fetchTeamList()
+})
+// 处理空间选择变化
+const spaceId = useSpaceVoStore().spaceVo.id
+const params = ref<{spaceId?: number, teamId?: number}>()
+// accept the full payload to match child emit signature exactly
+const handleSpaceChange = (payload: { type: string, teamId?: number | null | undefined }) => {
+  const { type, teamId } = payload
+  if (type === 'public') {
+    params.value = {}
+  } else if (type === 'team') {
+    params.value = { spaceId: teamId ?? undefined }
+  } else {
+    params.value = { spaceId: spaceId }
+  }
+}
 /**
  * 上传图片
- * @param file 图片文件
  */
 const handleUpload = async () => {
   try {
     loading.value = true
-    const params = {id: pictureId.value ?? null, fileUrl: fileUrl.value}
-    const res = await uploadPictureUsingPost(params, {})
+    const res: any = await uploadPictureUsingPost(params.value || {}, {})
     if (res?.data?.code === 0 && res?.data?.data) {
       loading.value = false
       props.onSuccess?.(res.data?.data)
