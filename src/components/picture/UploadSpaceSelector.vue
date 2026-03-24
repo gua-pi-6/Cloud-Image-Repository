@@ -95,8 +95,8 @@ const teamOptions = computed(() => {
 
 // --- 监听状态变化，防止出现非法选中 ---
 watch(
-  [isLogin, hasTeamSpace, () => props.hasPrivateSpace],
-  ([newIsLogin, newHasTeam, newHasPrivate]) => {
+  [isLogin, hasTeamSpace, hasPrivateSpace],
+  async ([newIsLogin, newHasTeam, newHasPrivate]) => {
     // 1. 如果用户退出登录，强制重置为公共图库
     if (!newIsLogin && activeType.value !== 'public') {
       activeType.value = 'public'

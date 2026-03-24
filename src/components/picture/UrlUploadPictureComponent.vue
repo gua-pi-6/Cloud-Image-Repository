@@ -1,8 +1,8 @@
 <template>
-  <div id="urlUploadFileElement">
+  <!-- 整个组件只有在 URL 中没有 id 时才渲染 -->
+  <div id="urlUploadFileElement" v-if="!hasId">
     <UploadSpaceSelector @change="handleSpaceChange"
                          :teamList="teamList"
-                         v-if="!hasId"
     />
     <div class="url-picture-upload">
       <a-input-group compact style="margin-bottom: 16px">
@@ -36,10 +36,19 @@ const loading = ref(false)
 const fileUrl = ref('')
 const pictureId = ref()
 const picture = ref<API.PictureVO>({})
-// make route params id reactive so template v-if works as expected
+// make route reactive and compute whether an "id" exists either in params or in query
 const route = useRoute()
-// compute a boolean for whether an id exists (avoids string/undefined truthiness pitfalls)
-const hasId = computed(() => Boolean(route.params.id))
+const hasId = computed(() => {
+  // check params first, then query; support string|number|array
+  const p = route.params.id
+  if (p !== undefined && p !== null && String(p) !== '') return true
+  const q = route.query.id
+  if (q !== undefined && q !== null) {
+    if (Array.isArray(q)) return q.length > 0 && q.some(v => String(v) !== '')
+    return String(q) !== ''
+  }
+  return false
+})
 
 
 const teamList = ref<Array<{ id: number, spaceName?: string }>>([])
